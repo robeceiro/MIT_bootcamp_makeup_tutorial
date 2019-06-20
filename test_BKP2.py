@@ -190,7 +190,6 @@ from InstagramAPI import InstagramAPI
 instagram = InstagramAPI("suyuen","makeuplovers")
 instagram.login()
 light_enable = False
-start = 0
 while True:
     frame = vs.read()
     frame = imutils.resize(frame, width=800)
@@ -199,18 +198,10 @@ while True:
     output = frame.copy()
     rects = detector(gray, 0)
     if rects and not light_enable:
-        GPIO.output(36,GPIO.LOW)
-        GPIO.output(38,GPIO.HIGH)
-        GPIO.output(40,GPIO.LOW)
+        GPIO.output(36, GPIO.HIGH)
+        GPIO.output(38, GPIO.LOW)
+        GPIO.output(40, GPIO.LOW)
         light_enable = True
-        start = time.time()
-    else:
-        if (time.time()-start)> 20:
-            GPIO.output(36, GPIO.LOW)
-            GPIO.output(38, GPIO.LOW)
-            GPIO.output(40, GPIO.LOW)
-            light_enable = False
-
     for rect in rects:
         shape = predictor(gray, rect)
         shape = face_utils.shape_to_np(shape)
