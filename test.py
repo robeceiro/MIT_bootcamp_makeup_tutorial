@@ -11,13 +11,54 @@ import RPi.GPIO as GPIO
 
 global current_step
 current_step = 1
+global light
+light = 0
+global snapshot
+snapshot=False
+
+def update_light():
+        global light
+        if light==0:
+             GPIO.output(36, GPIO.LOW)
+             GPIO.output(38, GPIO.LOW)
+             GPIO.output(40, GPIO.LOW)
+        elif light==1:
+             GPIO.output(36, GPIO.HIGH)
+             GPIO.output(38, GPIO.LOW)
+             GPIO.output(40, GPIO.LOW)
+        elif light==2:
+             GPIO.output(36, GPIO.LOW)
+             GPIO.output(38, GPIO.HIGH)
+             GPIO.output(40, GPIO.LOW)
+        elif light==3:
+             GPIO.output(36, GPIO.LOW)
+             GPIO.output(38, GPIO.LOW)
+             GPIO.output(40, GPIO.HIGH)
+
 
 def button_callback1(channel):
         print("Button 1 was pushed!")
+        global light
+        if light < 3:
+            light = light + 1
+            update_light()
+        else:
+            light = 0
+            update_light()
 def button_callback2(channel):
         print("Button 2 was pushed!")
+        global snapshot
+        if snapshot:
+            snapshot = False
+        else:
+            snapshot = True
 def button_callback3(channel):
         print("Button 3 was pushed!")
+        global current_step
+        if current_step > 1:
+            current_step = current_step - 1
+        else:
+            current_step = 7
 def button_callback4(channel):
         global current_step
         if current_step < 7:
@@ -157,7 +198,9 @@ while True:
         shape = face_utils.shape_to_np(shape)
         #output = visualize_facial_landmarks(frame, shape)
         output = makeup_step(STEPS[current_step],COLORS[STEPS[current_step]], frame, shape, True,current_step,TEXTS[STEPS[current_step]],0.4)
-    cv2.imshow("Frame", output)
+    # global snapshot
+    if not snapshot:
+        cv2.imshow("Frame", output)
     key = cv2.waitKey(1) & 0xFF
     if key == ord("q"):
         break
