@@ -19,10 +19,11 @@ def button_callback2(channel):
 def button_callback3(channel):
         print("Button 3 was pushed!")
 def button_callback4(channel):
-        if current_step < 3:
+        global current_step
+        if current_step < 7:
             current_step = current_step + 1
         else:
-            current_step=0
+            current_step=1
         print("Button 4 was pushed!")
         print(str(current_step))
 
@@ -146,7 +147,7 @@ TEXTS = OrderedDict([
 
 while True:
     frame = vs.read()
-    frame = imutils.resize(frame, width=600)
+    frame = imutils.resize(frame, width=400)
     frame=cv2.flip(frame,1)
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     output = frame.copy()
