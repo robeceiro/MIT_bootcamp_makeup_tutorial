@@ -9,7 +9,8 @@ import dlib
 import cv2
 import RPi.GPIO as GPIO
 
-lightValue = 0
+global current_step
+current_step = 1
 
 def button_callback1(channel):
         print("Button 1 was pushed!")
@@ -18,12 +19,12 @@ def button_callback2(channel):
 def button_callback3(channel):
         print("Button 3 was pushed!")
 def button_callback4(channel):
-        if lightValue < 3:
-            lightValue = lightValue + 1
+        if current_step < 3:
+            current_step = current_step + 1
         else:
-            lightValue=0
+            current_step=0
         print("Button 4 was pushed!")
-        print(str(lightValue))
+        print(str(current_step))
 
 
 GPIO.setwarnings(False) # Ignore warning for now
@@ -75,10 +76,44 @@ print("[INFO] camera sensor warming up...")
 vs = VideoStream(usePiCamera=args["picamera"] > 0).start()
 time.sleep(2.0)
 
-# define a dictionary that maps the indexes of the facial
-# landmarks to specific face regions
-from collections import OrderedDict
 
+
+def makeup_step(new_name,color, image, shape, fill_shape, step_number, text,alpha=0.8):
+    overlay = image.copy()
+    output = image.copy()
+    radius = 20
+    height,width,channels = image.shape
+    for (i, name) in enumerate(FACIAL_LANDMARKS_IDXS.keys()):
+        (j, k) = FACIAL_LANDMARKS_IDXS[name]
+        pts = shape[j:k]
+        if name == new_name:
+            if fill_shape:
+                hull = cv2.convexHull(pts)
+                cv2.drawContours(overlay, [hull], -1, color, -1)
+            else:
+                for l in range(1, len(pts)):
+                    ptA = tuple(pts[l - 1])
+                    ptB = tuple(pts[l])
+                    cv2.line(overlay, ptA, ptB, color, 2)
+    cv2.rectangle(overlay,(2*radius,height-30),(250,height),(0,0,0),-1)
+    cv2.addWeighted(overlay, alpha, output, 1 - alpha, 0, output)
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    cv2.circle(output,(radius,height-radius), radius, color, -1)
+    cv2.putText(output, text, (2*radius+5, height-10), font, 0.5, (255, 255, 255), 1)
+    # return the output image
+    return output
+    
+
+from collections import OrderedDict
+STEPS = OrderedDict([
+    (3,"mouth"),
+    (1,"right_eyebrow"),
+    (2,"left_eyebrow"),
+    (6,"right_eye"),
+    (5,"left_eye"),
+    (4,"nose"),
+    (7,"jaw")
+])
 FACIAL_LANDMARKS_IDXS = OrderedDict([
     ("mouth", (48, 68)),
     ("right_eyebrow", (17, 22)),
@@ -88,84 +123,43 @@ FACIAL_LANDMARKS_IDXS = OrderedDict([
     ("nose", (27, 35)),
     ("jaw", (0, 17))
 ])
+default_color = (0,170,220)
+COLORS = OrderedDict([
+    ("mouth", (0, 200, 0)),
+    ("right_eyebrow", default_color),
+    ("left_eyebrow", default_color),
+    ("right_eye", default_color),
+    ("left_eye", default_color),
+    ("nose", default_color),
+    ("jaw", default_color)
+])
+TEXTS = OrderedDict([
+    ("mouth", "L'Oreal Lipstick Mate N.68"),
+    ("right_eyebrow", "L'Oreal Eyeliner N.51"),
+    ("left_eyebrow", "L'Oreal Eyeliner N.51"),
+    ("right_eye", "L'Oreal Eyeliner N.51"),
+    ("left_eye", "L'Oreal Eyeliner N.51"),
+    ("nose", "L'Oreal Paris Infalible"),
+    ("jaw", "Powder")
+])
 
-def visualize_facial_landmarks(image, shape, colors=None, alpha=0.8):
-    # create two copies of the input image -- one for the
-    # overlay and one for the final output image
-    overlay = image.copy()
-    output = image.copy()
-    height,width,channels = image.shape
-    # if the colors list is None, initialize it with a unique
-    # color for each facial landmark region
-    if colors is None:
-        colors = [(19, 199, 109), (79, 76, 240), (230, 159, 23),
-            (168, 100, 168), (158, 163, 32),
-            (163, 38, 32), (180, 42, 220)]
-    # loop over the facial landmark regions individually
-    for (i, name) in enumerate(FACIAL_LANDMARKS_IDXS.keys()):
-        # grab the (x, y)-coordinates associated with the
-        # face landmark
-        (j, k) = FACIAL_LANDMARKS_IDXS[name]
-        pts = shape[j:k]
 
-        # check if are supposed to draw the jawline
-        if name == "right_eyebrow": # or name == "left_eyebrow" or name=="mouth":
-            # since the jawline is a non-enclosed facial region,
-            # just draw lines between the (x, y)-coordinates
-            text = 'Step 1: Paint here'
-            font = cv2.FONT_HERSHEY_SIMPLEX
-            radius = 20
-            cv2.putText(overlay, text, (2*radius+5, height-10), font, 0.5, (255, 255, 0), 2)
-            cv2.circle(overlay,(radius,height-radius), radius, (0,0,255), -1)
-            for l in range(1, len(pts)):
-                ptA = tuple(pts[l - 1])
-                ptB = tuple(pts[l])
-                cv2.line(overlay, ptA, ptB, colors[i], 2)
-
-        # otherwise, compute the convex hull of the facial
-        # landmark coordinates points and display it
-        #else:
-        #    hull = cv2.convexHull(pts)
-        #    cv2.drawContours(overlay, [hull], -1, colors[i], -1)
-    # apply the transparent overlay
-    cv2.addWeighted(overlay, alpha, output, 1 - alpha, 0, output)
-    # return the output image
-    return output
-
-# loop over the frames from the video stream
 while True:
-    # grab the frame from the threaded video stream, resize it to
-    # have a maximum width of 400 pixels, and convert it to
-    # grayscale
     frame = vs.read()
-    frame = imutils.resize(frame, width=500)
+    frame = imutils.resize(frame, width=600)
     frame=cv2.flip(frame,1)
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     output = frame.copy()
-    # detect faces in the grayscale frame
     rects = detector(gray, 0)
-     # loop over the face detections
     for rect in rects:
-        # determine the facial landmarks for the face region, then
-        # convert the facial landmark (x, y)-coordinates to a NumPy
-        # array
         shape = predictor(gray, rect)
         shape = face_utils.shape_to_np(shape)
-
-        # loop over the (x, y)-coordinates for the facial landmarks
-        # and draw them on the image
-        #for (x, y) in shape:
-        #    cv2.circle(frame, (x, y), 1, (0, 0, 255), -1)
-        output = visualize_facial_landmarks(frame, shape)
-
-    # show the frame
+        #output = visualize_facial_landmarks(frame, shape)
+        output = makeup_step(STEPS[current_step],COLORS[STEPS[current_step]], frame, shape, True,current_step,TEXTS[STEPS[current_step]],0.4)
     cv2.imshow("Frame", output)
     key = cv2.waitKey(1) & 0xFF
-
-    # if the `q` key was pressed, break from the loop
     if key == ord("q"):
         break
 
-# do a bit of cleanup
 cv2.destroyAllWindows()
 vs.stop()
