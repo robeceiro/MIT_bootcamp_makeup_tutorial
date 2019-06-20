@@ -185,6 +185,10 @@ TEXTS = OrderedDict([
     ("jaw", "Powder")
 ])
 
+from InstagramAPI import InstagramAPI
+
+instagram = InstagramAPI("suyuen","makeuplovers")
+instagram.login()
 
 while True:
     frame = vs.read()
@@ -201,6 +205,15 @@ while True:
     # global snapshot
     if not snapshot:
         cv2.imshow("Frame", output)
+    else:
+        cv2.putText(output,"Uploading to Instagram",(0,100),cv2.FONT_HERSHEY_SIMPLEX,0.5,(0,0,255),2) 
+        cv2.imshow("Frame",output)
+        path = "upload.jpg"
+        cv2.write(path,output)
+        caption = "#mitbootcamp MakeUpLovers"
+        instagram.uploadPhoto(path,caption=caption)
+        snapshot = False
+        time.sleep(3)
     key = cv2.waitKey(1) & 0xFF
     if key == ord("q"):
         break
