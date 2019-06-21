@@ -193,7 +193,7 @@ light_enable = False
 start = 0
 while True:
     frame = vs.read()
-    frame = imutils.resize(frame, width=800)
+    frame = imutils.resize(frame, width=600)
     frame=cv2.flip(frame,1)
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     output = frame.copy()
@@ -224,7 +224,7 @@ while True:
         cv2.imwrite(path,output)
         output = cv2.putText(output,"Uploading to Instagram",(20,100),cv2.FONT_HERSHEY_SIMPLEX,0.5,(0,0,255),2) 
         cv2.imshow("Frame",output)
-        caption = "#mitbootcamp #mitdeeptech MakeUpLovers"
+        caption = "#mitbootcamp #mitdeeptech MakeUpLovers #milanbeauty "
         instagram.uploadPhoto(path,caption=caption)
         snapshot = False
         #time.sleep(6)
